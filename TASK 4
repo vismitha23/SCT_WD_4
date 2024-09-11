@@ -1,0 +1,58 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import folium
+from folium.plugins import HeatMap
+from sklearn.preprocessing import LabelEncoder
+
+traffic_data = pd.DataFrame({
+    'Time': ['06:00', '12:00', '18:00', '22:00', '03:00'],
+    'Weather': ['Clear', 'Rainy', 'Clear', 'Foggy', 'Snow'],
+    'Road_Conditions': ['Dry', 'Wet', 'Dry', 'Wet', 'Icy'],
+    'Latitude': [40.7128, 34.0522, 41.8781, 51.5074, 35.6895],
+    'Longitude': [-74.0060, -118.2437, -87.6298, -0.1278, 139.6917],
+    'Accident_Severity': [2, 3, 1, 2, 3]  
+})
+
+print(traffic_data.head())
+
+traffic_data['Time'] = pd.to_datetime(traffic_data['Time'], format='%H:%M').dt.hour
+
+label_encoder = LabelEncoder()
+traffic_data['Weather'] = label_encoder.fit_transform(traffic_data['Weather'])
+traffic_data['Road_Conditions'] = label_encoder.fit_transform(traffic_data['Road_Conditions'])
+center_lat = traffic_data['Latitude'].mean()
+center_long = traffic_data['Longitude'].mean()
+m = folium.Map(location=[center_lat, center_long], zoom_start=12)
+heat_data = [[row['Latitude'], row['Longitude']] for index, row in traffic_data.iterrows()]
+HeatMap(heat_data).add_to(m)
+
+m.save("accident_hotspots_map.html")  
+plt.figure(figsize=(8, 6))
+sns.barplot(x='Weather', y='Accident_Severity', data=traffic_data)
+plt.title('Weather Conditions vs. Accident Severity')
+plt.xlabel('Weather Conditions')
+plt.ylabel('Average Accident Severity')
+plt.show()
+plt.figure(figsize=(8, 6))
+sns.barplot(x='Road_Conditions', y='Accident_Severity', data=traffic_data)
+plt.title('Road Conditions vs. Accident Severity')
+plt.xlabel('Road Conditions')
+plt.ylabel('Average Accident Severity')
+plt.show()
+plt.figure(figsize=(8, 6))
+sns.lineplot(x='Time', y='Accident_Severity', data=traffic_data, marker='o')
+plt.title('Time of Day vs. Accident Severity')
+plt.xlabel('Hour of Day')
+plt.ylabel('Average Accident Severity')
+plt.xticks(np.arange(0, 24, step=1))
+plt.grid(True)
+plt.show()
+plt.figure(figsize=(10, 6))
+heatmap_data = pd.pivot_table(traffic_data, values='Accident_Severity', index='Time', columns='Weather', aggfunc=np.mean)
+sns.heatmap(heatmap_data, cmap="YlGnBu", annot=True)
+plt.title('Accidents by Time and Weather Conditions')
+plt.xlabel('Weather Conditions')
+plt.ylabel('Hour of Day')
+plt.show()
